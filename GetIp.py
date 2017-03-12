@@ -80,7 +80,7 @@ class GetIp():
 
     #从文件中读取ip列表
     def Read(self):
-        f = open('ipf.txt','r')
+        f = open('ip.txt','r')
         lines = f.readlines()
         IpList = []
         for i in lines:
