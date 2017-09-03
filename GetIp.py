@@ -1,6 +1,7 @@
 #!/usr/bin/env
 #coding=utf8
 
+# kali linux python 2.7.13
 # author:TClion
 # update:2017-09-03
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
