@@ -3,7 +3,7 @@
 
 # author:TClion
 # update:2017-09-03
-# 在 西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
+# 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
 
 
 import json
