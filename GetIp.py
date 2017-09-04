@@ -48,8 +48,8 @@ class GetIp():
         self.slow_num = 0               #不符合标准的ip数量
 
     #从西刺网站上抓取ip，全部放在mongodb中
-    def GetIpDict(self, pagenum):
-        url = '%s%d' % (self.Url, pagenum)
+    def GetIpDict(self, pagenumber):
+        url = '%s%d' % (self.Url, pagenumber)
         content = requests.get(url, headers=header).content
         data = etree.HTML(content)
         ip = data.xpath('//tr[@class="odd"]/td[2]/text()|//tr[@class=""]/td[2]/text()')
@@ -63,7 +63,7 @@ class GetIp():
                 }
                 if self.collection.find_one(ip_dict) == None:
                     self.collection.insert(ip_dict)
-                    print i+' insert into mongodb'
+                    print i + ' insert into mongodb'
                     self.new_ip_num += 1
             except:
                 print 'new ip insert error'
