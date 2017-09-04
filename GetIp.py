@@ -6,9 +6,10 @@
 # update:2017-09-04
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
 
-
+import time
 import json
 import random
+import gevent
 
 import pymongo
 import logging
@@ -42,6 +43,8 @@ class GetIp():
         self.collection = self.db.ipall
         self.new_ip_num = 0                                         #要抓取的页面数，一个页面100个ip
         self.fast_ip_num = 0
+        self.fast_ip_lst = []
+        self.errnum = 0
 
     #从西刺网站上抓取ip，全部放在mongodb中
     def GetIpDict(self, pagenum):
@@ -65,28 +68,26 @@ class GetIp():
                 print 'new ip insert error'
 
 
-    #第二次筛选，从mongodb选出响应快的ip
-    def GetFastIp(self):
-        fast_ip = []
-        for item in self.collection.find():
-            i = item['ip']
-            p = item['port']
-            ip = 'http://' + i + ':' + p
-            ip_dict = {
-                'http': ip,
-                'https': ip,
-            }
-            try:
-                text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
-                if i in text:
-                    print i+' insert into fast list'
-                    fast_ip.append({i: p})
-                    self.fast_ip_num += 1
-                else:
-                    continue
-            except:
-                continue
-        return fast_ip
+    #筛选出响应快的ip
+    def GetFastIp(self, item):
+        i = item['ip']
+        p = item['port']
+        ip = 'http://' + i + ':' + p
+        ip_dict = {
+            'http': ip,
+            'https': ip,
+        }
+        try:
+            text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
+            if i in text:
+                print i+' insert into fast list'
+                self.fast_ip_lst.append({i: p})
+                self.fast_ip_num += 1
+            else:
+                self.errnum += 1
+        except:
+            self.errnum += 1
+        print self.errnum
 
     #将ip存入ip.txt中
     def SaveFastIp(self, fast_ip):
@@ -110,6 +111,7 @@ class GetIp():
             IpList.append(ip_dict)
         return IpList
 
+    #测试ip.txt中ip的响应速度
     def test(self, ip_lst):
         print 'fast list len is %d' % len(ip_lst)
         num = 0
@@ -131,8 +133,21 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
     print 'new ip counts %d' % Ip.new_ip_num
+
+    # thread = [gevent.spawn(Ip.GetFastIp02, i) for i in Ip.collection.find()]
+    # gevent.joinall(thread)
+    # T1 = time.time()
+    # pool = Pool(processes=10)    #线程池
+    # for i in Ip.collection.find():
+    #     pool.apply_async(Ip.GetFastIp, (i,))
+    # pool.close()
+    # pool.join()
+    # T2 = time.time()
+    # print T2-T1
+
     # L = Ip.GetFastIp()
-    # Ip.SaveFastIp(L)
+    #Ip.SaveFastIp(Ip.fast_ip_lst)
     # print Ip.fast_ip_num
+
     # ip = Ip.get_ip_lst()
     # Ip.test(ip)
