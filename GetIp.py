@@ -1,10 +1,11 @@
 #!/usr/bin/env
 #coding=utf8
 
+# version:2.0
 # kali linux python 2.7.13
 # author:TClion
-# update:2017-09-04
-# 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
+# update:2017-09-05
+# 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt中
 
 import time
 import json
@@ -41,10 +42,10 @@ class GetIp():
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.db = self.conn.ipdb
         self.collection = self.db.ipall
-        self.new_ip_num = 0                                         #要抓取的页面数，一个页面100个ip
-        self.fast_ip_num = 0
-        self.fast_ip_lst = []
-        self.errnum = 0
+        self.new_ip_num = 0             #新入库的ip数量
+        self.fast_ip_num = 0            #筛选后的ip数量
+        self.fast_ip_lst = []           #响应快ip的列表
+        self.slow_num = 0               #不符合标准的ip数量
 
     #从西刺网站上抓取ip，全部放在mongodb中
     def GetIpDict(self, pagenum):
@@ -67,7 +68,6 @@ class GetIp():
             except:
                 print 'new ip insert error'
 
-
     #筛选出响应快的ip
     def GetFastIp(self, item):
         i = item['ip']
@@ -84,10 +84,10 @@ class GetIp():
                 self.fast_ip_lst.append({i: p})
                 self.fast_ip_num += 1
             else:
-                self.errnum += 1
+                self.slow_num += 1
         except:
-            self.errnum += 1
-        print self.errnum
+            self.slow_num += 1
+        print self.slow_num
 
     #将ip存入ip.txt中
     def SaveFastIp(self, fast_ip):
