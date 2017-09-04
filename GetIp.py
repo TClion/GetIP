@@ -3,7 +3,7 @@
 
 # kali linux python 2.7.13
 # author:TClion
-# update:2017-09-03
+# update:2017-09-04
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip
 
 
@@ -39,8 +39,9 @@ class GetIp():
         self.testurl = 'http://ip.chinaz.com/getip.aspx'    #测试ip页面
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.db = self.conn.ipdb
-        self.account = self.db.ipall
+        self.collection = self.db.ipall
         self.new_ip_num = 0                                         #要抓取的页面数，一个页面100个ip
+        self.fast_ip_num = 0
 
     #从西刺网站上抓取ip，全部放在mongodb中
     def GetIpDict(self, pagenum):
@@ -56,27 +57,31 @@ class GetIp():
                     'ip': i,
                     'port': p
                 }
-                if self.account.find_one(ip_dict) == None:
-                    self.account.insert(ip_dict)
+                if self.collection.find_one(ip_dict) == None:
+                    self.collection.insert(ip_dict)
+                    print i+' insert into mongodb'
                     self.new_ip_num += 1
             except:
-                logging.debug('new ip insert error')
+                print 'new ip insert error'
 
 
     #第二次筛选，从mongodb选出响应快的ip
     def GetFastIp(self):
         fast_ip = []
-        for item in self.account.find():
+        for item in self.collection.find():
             i = item['ip']
             p = item['port']
+            ip = 'http://' + i + ':' + p
             ip_dict = {
-                'http': 'http://' + i + ':' + p,
-                'https': 'https://' + i + ':' + p,
+                'http': ip,
+                'https': ip,
             }
             try:
-                text = requests.get(self.testurl, proxies=ip_dict, timeout=1).text
+                text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
                 if i in text:
+                    print i+' insert into fast list'
                     fast_ip.append({i: p})
+                    self.fast_ip_num += 1
                 else:
                     continue
             except:
@@ -90,26 +95,44 @@ class GetIp():
                 f.write(str(ip)+'\n')
 
     #从文件中读取ip列表
-    def GetOne(self, num=None):
+    def get_ip_lst(self):
         IpList = []
         with open('ip.txt', 'r') as f:
             lines = f.readlines()
-        for i in lines:
-            #p = json.loads(i.replace('\'', '\"'))    # windows 将单引号换成双引号
-            IpList.append(i)
-        if num == None:
-            return random.choice(IpList)
-        else:
-            return IpList
+        for ip in lines:
+            ip_lst = ip.split('\'')
+            i, p = ip_lst[1], ip_lst[3]
+            ip_str = 'http://' + i + ':' + p
+            ip_dict = {
+                'http': ip_str,
+                'https': ip_str,
+            }
+            IpList.append(ip_dict)
+        return IpList
+
+    def test(self, ip_lst):
+        print 'fast list len is %d' % len(ip_lst)
+        num = 0
+        for ip in ip_lst:
+            try:
+                text = requests.get(self.testurl, proxies=ip, timeout=5).text
+                num += 1
+            except:
+                continue
+        print 'fast ip number is %d' % num
+
 
 if __name__ == '__main__':
     Ip = GetIp()
     pool = Pool(processes=4)    #线程池
-    for i in range(1, 2):
+    for i in range(1, 6):
         pool.apply_async(Ip.GetIpDict, (i,))
     pool.apply_async(Ip.GetFastIp)
     pool.close()
     pool.join()
+    # print Ip.new_ip_num
     # L = Ip.GetFastIp()
     # Ip.SaveFastIp(L)
-    # ip = Ip.GetOne()
+    # print Ip.fast_ip_num
+    # ip = Ip.get_ip_lst()
+    # Ip.test(ip)
