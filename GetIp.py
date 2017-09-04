@@ -120,17 +120,17 @@ class GetIp():
                 num += 1
             except:
                 continue
-        print 'fast ip number is %d' % num
+        print 'fast ip counts %d' % num
 
 
 if __name__ == '__main__':
     Ip = GetIp()
     pool = Pool(processes=4)    #线程池
-    for i in range(1, 6):
+    for i in range(1, 9):
         pool.apply_async(Ip.GetIpDict, (i,))
     pool.close()
     pool.join()
-    # print Ip.new_ip_num
+    print 'new ip counts %d' % Ip.new_ip_num
     # L = Ip.GetFastIp()
     # Ip.SaveFastIp(L)
     # print Ip.fast_ip_num
