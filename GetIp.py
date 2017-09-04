@@ -114,6 +114,7 @@ class GetIp():
         print 'fast list len is %d' % len(ip_lst)
         num = 0
         for ip in ip_lst:
+            print ip['http']
             try:
                 text = requests.get(self.testurl, proxies=ip, timeout=5).text
                 num += 1
@@ -127,7 +128,6 @@ if __name__ == '__main__':
     pool = Pool(processes=4)    #线程池
     for i in range(1, 6):
         pool.apply_async(Ip.GetIpDict, (i,))
-    pool.apply_async(Ip.GetFastIp)
     pool.close()
     pool.join()
     # print Ip.new_ip_num
