@@ -1,5 +1,5 @@
 #!/usr/bin/env
-#coding=utf8
+# coding=utf8
 
 # version:2.0
 # kali linux python 2.7.13
@@ -32,23 +32,22 @@ header = {
     'Upgrade-Insecure-Requests': '1',
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 
-}       #xici代理的header头
+}  # xici代理的header头
 
 
 class GetIp():
-
     def __init__(self):
-        self.Url = "http://www.xicidaili.com/nn/"           #xici代理页面
-        self.testurl = 'http://ip.chinaz.com/getip.aspx'    #测试ip页面
+        self.Url = "http://www.xicidaili.com/nn/"  # xici代理页面
+        self.testurl = 'http://ip.chinaz.com/getip.aspx'  # 测试ip页面
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.db = self.conn.ipdb
         self.collection = self.db.ipall
-        self.new_ip_num = 0             #新入库的ip数量
-        self.fast_ip_num = 0            #筛选后的ip数量
-        self.fast_ip_lst = []           #响应快ip的列表
-        self.slow_num = 0               #不符合标准的ip数量
+        self.new_ip_num = 0  # 新入库的ip数量
+        self.fast_ip_num = 0  # 筛选后的ip数量
+        self.fast_ip_lst = []  # 响应快ip的列表
+        self.slow_num = 0  # 不符合标准的ip数量
 
-    #从西刺网站上抓取ip，全部放在mongodb中
+    # 从西刺网站上抓取ip，全部放在mongodb中
     def GetIpDict(self, pagenumber):
         url = '%s%d' % (self.Url, pagenumber)
         content = requests.get(url, headers=header).content
@@ -69,7 +68,7 @@ class GetIp():
             except:
                 print 'new ip insert error'
 
-    #筛选出响应快的ip
+    # 筛选出响应快的ip
     def GetFastIp(self, item):
         i = item['ip']
         p = item['port']
@@ -81,7 +80,7 @@ class GetIp():
         try:
             text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
             if i in text:
-                print i+' insert into fast list'
+                print i + ' insert into fast list'
                 self.fast_ip_lst.append({i: p})
                 self.fast_ip_num += 1
             else:
@@ -90,13 +89,13 @@ class GetIp():
             self.slow_num += 1
         print self.slow_num
 
-    #将ip存入ip.txt中
+    # 将ip存入ip.txt中
     def SaveFastIp(self, fast_ip):
-        with open('ip.txt', 'w') as f:     #将优质ip写入文件
+        with open('ip.txt', 'w') as f:  # 将优质ip写入文件
             for ip in fast_ip:
-                f.write(str(ip)+'\n')
+                f.write(str(ip) + '\n')
 
-    #从文件中读取ip列表
+    # 从文件中读取ip列表
     def get_ip_lst(self):
         IpList = []
         with open('ip.txt', 'r') as f:
@@ -112,7 +111,7 @@ class GetIp():
             IpList.append(ip_dict)
         return IpList
 
-    #测试ip.txt中ip的响应速度
+    # 测试ip.txt中ip的响应速度
     def test(self, ip_lst):
         print 'fast list len is %d' % len(ip_lst)
         num = 0
@@ -128,7 +127,7 @@ class GetIp():
 
 if __name__ == '__main__':
     Ip = GetIp()
-    pool = Pool(processes=4)    #线程池，从网页抓取ip
+    pool = Pool(processes=4)  # 线程池，从网页抓取ip
     for i in range(1, 9):
         pool.apply_async(Ip.GetIpDict, (i,))
     pool.close()
@@ -136,8 +135,8 @@ if __name__ == '__main__':
     print 'new ip counts %d' % Ip.new_ip_num
 
     # T1 = time.time()
-    
-    # thread = [p.spawn(Ip.GetFastIp, i) for i in Ip.collection.find()] #测试gevent，暂时不用
+
+    # thread = [gevent.spawn(Ip.GetFastIp, i) for i in Ip.collection.find()] #测试gevent，暂时不用
     # gevent.joinall(thread)
 
     # pool = Pool(processes=10)    #线程池，测试ip
