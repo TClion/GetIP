@@ -18,6 +18,7 @@ import requests
 import multiprocessing
 
 from lxml import etree
+from gevent import pool
 from multiprocessing.dummy import Pool
 
 header = {
@@ -127,17 +128,19 @@ class GetIp():
 
 if __name__ == '__main__':
     Ip = GetIp()
-    pool = Pool(processes=4)    #线程池
+    pool = Pool(processes=4)    #线程池，从网页抓取ip
     for i in range(1, 9):
         pool.apply_async(Ip.GetIpDict, (i,))
     pool.close()
     pool.join()
     print 'new ip counts %d' % Ip.new_ip_num
 
-    # thread = [gevent.spawn(Ip.GetFastIp02, i) for i in Ip.collection.find()]
-    # gevent.joinall(thread)
     # T1 = time.time()
-    # pool = Pool(processes=10)    #线程池
+    
+    # thread = [p.spawn(Ip.GetFastIp, i) for i in Ip.collection.find()] #测试gevent，暂时不用
+    # gevent.joinall(thread)
+
+    # pool = Pool(processes=10)    #线程池，测试ip
     # for i in Ip.collection.find():
     #     pool.apply_async(Ip.GetFastIp, (i,))
     # pool.close()
@@ -145,9 +148,8 @@ if __name__ == '__main__':
     # T2 = time.time()
     # print T2-T1
 
-    # L = Ip.GetFastIp()
-    #Ip.SaveFastIp(Ip.fast_ip_lst)
+    # Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
     # print Ip.fast_ip_num
 
-    # ip = Ip.get_ip_lst()
+    # ip = Ip.get_ip_lst()  #取出并测试
     # Ip.test(ip)
