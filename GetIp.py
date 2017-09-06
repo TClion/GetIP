@@ -116,9 +116,9 @@ class GetIp():
         print 'fast list len is %d' % len(ip_lst)
         num = 0
         for ip in ip_lst:
-            print ip['http']
             try:
                 text = requests.get(self.testurl, proxies=ip, timeout=5).text
+                print ip['http']
                 num += 1
             except:
                 continue
