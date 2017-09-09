@@ -42,10 +42,12 @@ class GetIp():
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.db = self.conn.ipdb
         self.collection = self.db.ipall
-        self.new_ip_num = 0  # 新入库的ip数量
-        self.fast_ip_num = 0  # 筛选后的ip数量
-        self.fast_ip_lst = []  # 响应快ip的列表
-        self.slow_num = 0  # 不符合标准的ip数量
+        self.new_ip_num = 0     # 新入库的ip数量
+        self.fast_ip_num = 0    # 筛选后的ip数量
+        self.fast_ip_lst = []   # 响应快ip的列表
+        self.slow_num = 0       # 不符合标准的ip数量
+        logging.basicConfig(level=logging.DEBUG)    #设置logging等级为DeBUG
+        logging.getLogger("requests").setLevel(logging.WARNING)     #设置requests等级
 
     # 从西刺网站上抓取ip，全部放在mongodb中
     def GetIpDict(self, pagenumber):
@@ -63,10 +65,10 @@ class GetIp():
                 }
                 if self.collection.find_one(ip_dict) == None:
                     self.collection.insert(ip_dict)
-                    print i + ' insert into mongodb'
+                    logging.debug(i + ' insert into mongodb')
                     self.new_ip_num += 1
             except:
-                print 'new ip insert error'
+                logging.error('new ip insert error')
 
     # 筛选出响应快的ip
     def GetFastIp(self, item):
@@ -80,7 +82,7 @@ class GetIp():
         try:
             text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
             if i in text:
-                print i + ' insert into fast list'
+                logging.debug(i + ' insert into fast list')
                 self.fast_ip_lst.append({i: p})
                 self.fast_ip_num += 1
             else:
@@ -113,7 +115,7 @@ class GetIp():
 
     # 测试ip.txt中ip的响应速度
     def test(self, ip_lst):
-        print 'fast list len is %d' % len(ip_lst)
+        logging.debug('fast list len is %d' % len(ip_lst))
         num = 0
         for ip in ip_lst:
             try:
@@ -122,7 +124,7 @@ class GetIp():
                 num += 1
             except:
                 continue
-        print 'fast ip counts %d' % num
+        logging.debug('fast ip counts %d' % num)
 
 
 if __name__ == '__main__':
@@ -132,7 +134,7 @@ if __name__ == '__main__':
         pool.apply_async(Ip.GetIpDict, (i,))
     pool.close()
     pool.join()
-    print 'new ip counts %d' % Ip.new_ip_num
+    logging.debug('new ip counts %d' % Ip.new_ip_num)
 
     # T1 = time.time()
 
