@@ -4,22 +4,19 @@
 # version:2.0
 # kali linux python 2.7.13
 # author:TClion
-# update:2017-09-05
+# update:2017-09-30
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt中
 
-import time
-import json
-import random
-import gevent
+import redis
 
-import pymongo
+import gevent
 import logging
 import requests
-import multiprocessing
 
 from lxml import etree
-from gevent import pool
-from multiprocessing.dummy import Pool
+from gevent import pool as gp
+from gevent import monkey
+monkey.patch_all()
 
 header = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -39,17 +36,16 @@ class GetIp():
     def __init__(self):
         self.Url = "http://www.xicidaili.com/nn/"  # xici代理页面
         self.testurl = 'http://ip.chinaz.com/getip.aspx'  # 测试ip页面
-        self.conn = pymongo.MongoClient('localhost', 27017)
-        self.db = self.conn.ipdb
-        self.collection = self.db.ipall
+        self.R = redis.Redis(host='localhost', port=6379)
+        self.redis_db = 'ip'
         self.new_ip_num = 0     # 新入库的ip数量
         self.fast_ip_num = 0    # 筛选后的ip数量
         self.fast_ip_lst = []   # 响应快ip的列表
         self.slow_num = 0       # 不符合标准的ip数量
         logging.basicConfig(level=logging.DEBUG)    #设置logging等级为DeBUG
-        logging.getLogger("requests").setLevel(logging.WARNING)     #设置requests等级
+        logging.getLogger("requests.packages.urllib3").setLevel(logging.WARNING)     #设置requests等级
 
-    # 从西刺网站上抓取ip，全部放在mongodb中
+    # 从西刺网站上抓取ip，全部放在redis中
     def GetIpDict(self, pagenumber):
         url = '%s%d' % (self.Url, pagenumber)
         content = requests.get(url, headers=header).content
@@ -59,21 +55,16 @@ class GetIp():
         ip_list = list(zip(ip, port))
         for i, p in ip_list:
             try:
-                ip_dict = {
-                    'ip': i,
-                    'port': p
-                }
-                if self.collection.find_one(ip_dict) == None:
-                    self.collection.insert(ip_dict)
-                    logging.debug(i + ' insert into mongodb')
-                    self.new_ip_num += 1
+                ip_str = i + ':' + p
+                self.R.sadd(self.redis_db, ip_str)
+                self.new_ip_num += 1
             except:
                 logging.error('new ip insert error')
 
     # 筛选出响应快的ip
     def GetFastIp(self, item):
-        i = item['ip']
-        p = item['port']
+        i = item.split(':')[0]
+        p = item.split(':')[1]
         ip = 'http://' + i + ':' + p
         ip_dict = {
             'http': ip,
@@ -129,28 +120,16 @@ class GetIp():
 
 if __name__ == '__main__':
     Ip = GetIp()
-    pool = Pool(processes=4)  # 线程池，从网页抓取ip
-    for i in range(1, 9):
-        pool.apply_async(Ip.GetIpDict, (i,))
-    pool.close()
-    pool.join()
+    thread = [gevent.spawn(Ip.GetIpDict, i) for i in xrange(1, 10)]
+    gevent.joinall(thread)
     logging.debug('new ip counts %d' % Ip.new_ip_num)
 
-    # T1 = time.time()
-
-    # thread = [gevent.spawn(Ip.GetFastIp, i) for i in Ip.collection.find()] #测试gevent，暂时不用
-    # gevent.joinall(thread)
-
-    # pool = Pool(processes=10)    #线程池，测试ip
-    # for i in Ip.collection.find():
-    #     pool.apply_async(Ip.GetFastIp, (i,))
-    # pool.close()
-    # pool.join()
-    # T2 = time.time()
-    # print T2-T1
-
+    # p = gp.Pool(100)
+    # p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
+    # 
+    # 
     # Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
     # print Ip.fast_ip_num
-
+    # 
     # ip = Ip.get_ip_lst()  #取出并测试
     # Ip.test(ip)
