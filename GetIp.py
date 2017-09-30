@@ -124,12 +124,10 @@ if __name__ == '__main__':
     gevent.joinall(thread)
     logging.debug('new ip counts %d' % Ip.new_ip_num)
 
-    # p = gp.Pool(100)
-    # p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
-    # 
-    # 
-    # Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
-    # print Ip.fast_ip_num
-    # 
+    p = gp.Pool(100)
+    p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
+    Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
+    print Ip.fast_ip_num
+
     # ip = Ip.get_ip_lst()  #取出并测试
     # Ip.test(ip)
