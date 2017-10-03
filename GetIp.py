@@ -11,6 +11,7 @@ import redis
 
 import gevent
 import logging
+import pymongo
 import requests
 
 from lxml import etree
@@ -37,6 +38,9 @@ class GetIp():
         self.Url = "http://www.xicidaili.com/nn/"  # xici代理页面
         self.testurl = 'http://ip.chinaz.com/getip.aspx'  # 测试ip页面
         self.R = redis.Redis(host='localhost', port=6379)
+        self.conn = pymongo.MongoClient('localhost', 27017)
+        self.m_db = self.conn['ipdb']
+        self.m_coll = self.m_db['ip_good']
         self.redis_db = 'ip'
         self.new_ip_num = 0     # 新入库的ip数量
         self.fast_ip_num = 0    # 筛选后的ip数量
@@ -71,7 +75,7 @@ class GetIp():
             'https': ip,
         }
         try:
-            text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
+            text = requests.get(self.testurl, proxies=ip_dict, timeout=5).text
             if i in text:
                 logging.debug(i + ' insert into fast list')
                 self.fast_ip_lst.append({i: p})
@@ -117,6 +121,20 @@ class GetIp():
                 continue
         logging.debug('fast ip counts %d' % num)
 
+    #存入mongo，并记录数量，数量越高，ip越稳定
+    def saveip_mongo(self):
+        for item in self.fast_ip_lst:
+            for i, p in item.iteritems():
+                ip_str = i + ':' + p
+                if self.m_coll.find_one({'ip':ip_str}) == None:
+                    self.m_coll.insert({'ip': ip_str, 'num': 1})
+                else:
+                    self.m_coll.update({'ip': ip_str}, {"$inc": {"num": 1}})
+
+    def goodip(self):
+        ip_lst = self.m_coll.find().sort('num', pymongo.DESCENDING)
+        for i in ip_lst:
+            print i['ip'], i['num']
 
 if __name__ == '__main__':
     Ip = GetIp()
@@ -124,10 +142,12 @@ if __name__ == '__main__':
     gevent.joinall(thread)
     logging.debug('new ip counts %d' % Ip.new_ip_num)
 
-    p = gp.Pool(100)
-    p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
-    Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
-    print Ip.fast_ip_num
+    # p = gp.Pool(100)
+    # p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
+    # Ip.saveip_mongo()
+    # Ip.goodip()
+    # Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
+    # print Ip.fast_ip_num
 
     # ip = Ip.get_ip_lst()  #取出并测试
     # Ip.test(ip)
