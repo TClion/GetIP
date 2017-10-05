@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf8
 
-# version:2.0
+# version:3.0
 # kali linux python 2.7.13
 # author:TClion
-# update:2017-09-30
+# update:2017-10-05
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt中
 
 import redis
@@ -36,7 +36,7 @@ header = {
 class GetIp():
     def __init__(self):
         self.Url = "http://www.xicidaili.com/nn/"  # xici代理页面
-        self.testurl = 'http://ip.chinaz.com/getip.aspx'  # 测试ip页面
+        self.testurl = 'http://python.jobbole.com/88594/'  # 测试页面
         self.R = redis.Redis(host='localhost', port=6379)
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.m_db = self.conn['ipdb']
@@ -46,8 +46,8 @@ class GetIp():
         self.fast_ip_num = 0    # 筛选后的ip数量
         self.fast_ip_lst = []   # 响应快ip的列表
         self.slow_num = 0       # 不符合标准的ip数量
-        logging.basicConfig(level=logging.DEBUG)    #设置logging等级为DeBUG
-        logging.getLogger("requests.packages.urllib3").setLevel(logging.WARNING)     #设置requests等级
+        logging.basicConfig(level=logging.INFO)    #设置logging等级为DeBUG
+        logging.getLogger("requests").setLevel(logging.WARNING)     #设置requests等级
 
     # 从西刺网站上抓取ip，全部放在redis中
     def GetIpDict(self, pagenumber):
@@ -75,9 +75,9 @@ class GetIp():
             'https': ip,
         }
         try:
-            text = requests.get(self.testurl, proxies=ip_dict, timeout=5).text
-            if i in text:
-                logging.debug(i + ' insert into fast list')
+            text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
+            if u'最难的问题' in text:
+                logging.info(i + ' insert into fast list')
                 self.fast_ip_lst.append({i: p})
                 self.fast_ip_num += 1
             else:
@@ -108,18 +108,6 @@ class GetIp():
             IpList.append(ip_dict)
         return IpList
 
-    # 测试ip.txt中ip的响应速度
-    def test(self, ip_lst):
-        logging.debug('fast list len is %d' % len(ip_lst))
-        num = 0
-        for ip in ip_lst:
-            try:
-                text = requests.get(self.testurl, proxies=ip, timeout=5).text
-                print ip['http']
-                num += 1
-            except:
-                continue
-        logging.debug('fast ip counts %d' % num)
 
     #存入mongo，并记录数量，数量越高，ip越稳定
     def saveip_mongo(self):
@@ -131,16 +119,49 @@ class GetIp():
                 else:
                     self.m_coll.update({'ip': ip_str}, {"$inc": {"num": 1}})
 
+    #将mongodb中的ip以num排序
     def goodip(self):
         ip_lst = self.m_coll.find().sort('num', pymongo.DESCENDING)
         for i in ip_lst:
             print i['ip'], i['num']
 
+    #将num小于10的从库中删除
+    def removeip(self):
+        for i in xrange(1, 10):
+            data = {'num': i}
+            self.m_coll.remove(data)
+
+    def get_ip_lst_m(self):
+        ip_lst = []
+        for item in self.m_coll.find():
+            ip_str = item['ip']
+            ip = ip_str.split(':')[0]
+            port = ip_str.split(':')[1]
+            new_ip_str = 'http://' + ip + ':' + port
+            ip_dict = {
+                'http': new_ip_str,
+                'https': new_ip_str,
+            }
+            ip_lst.append(ip_dict)
+        return ip_lst
+
+    #测试ip
+    def test(self, ip):
+        try:
+            text = requests.get(self.testurl, proxies=ip, timeout=3).text
+            if u'最难的问题' in text:
+                logging.info('good ip %s' % ip['http'])
+            else:
+                logging.info('bad ip %s' % ip['http'])
+        except:
+            logging.info('TimeOut %s' % ip['http'])
+
+
 if __name__ == '__main__':
     Ip = GetIp()
     thread = [gevent.spawn(Ip.GetIpDict, i) for i in xrange(1, 10)]
     gevent.joinall(thread)
-    logging.debug('new ip counts %d' % Ip.new_ip_num)
+    logging.info('new ip counts %d' % Ip.new_ip_num)
 
     # p = gp.Pool(100)
     # p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
@@ -150,4 +171,9 @@ if __name__ == '__main__':
     # print Ip.fast_ip_num
 
     # ip = Ip.get_ip_lst()  #取出并测试
-    # Ip.test(ip)
+    # Ip.removeip()
+    # Ip.goodip()
+    # ip_lst = Ip.get_ip_lst_m()
+    # for i in ip_lst:
+    #     Ip.test(i)
+
