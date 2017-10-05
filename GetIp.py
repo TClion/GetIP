@@ -5,7 +5,7 @@
 # kali linux python 2.7.13
 # author:TClion
 # update:2017-10-05
-# 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt中
+# 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt或mongodb中
 
 import redis
 
