@@ -35,7 +35,7 @@ header = {
 class GetIp():
     def __init__(self):
         self.Url = "http://www.xicidaili.com/nn/"  # xici代理页面
-        self.testurl = 'http://python.jobbole.com/88594/'  # 测试页面
+        self.testurl = 'http://ip.chinaz.com/getip.aspx'  # 测试页面
         self.R = redis.Redis(host='localhost', port=6379)
         self.conn = pymongo.MongoClient('localhost', 27017)
         self.m_db = self.conn['ipdb']
@@ -75,7 +75,7 @@ class GetIp():
         }
         try:
             text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
-            if u'最难的问题' in text:
+            if i in text:
                 logging.info(i + ' insert into fast list')
                 self.fast_ip_lst.append({i: p})
                 self.fast_ip_num += 1
@@ -83,7 +83,6 @@ class GetIp():
                 self.slow_num += 1
         except:
             self.slow_num += 1
-        print self.slow_num
 
     # 将ip存入ip.txt中
     def SaveFastIp(self, fast_ip):
