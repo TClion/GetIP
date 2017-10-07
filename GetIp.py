@@ -8,15 +8,14 @@
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt或mongodb中
 
 import redis
-
 import gevent
 import logging
 import pymongo
 import requests
 
 from lxml import etree
-from gevent import pool as gp
 from gevent import monkey
+from gevent import pool as gp
 monkey.patch_all()
 
 header = {
@@ -131,6 +130,7 @@ class GetIp():
             data = {'num': i}
             self.m_coll.remove(data)
 
+    #从mongodb中返回ip列表
     def get_ip_lst_m(self):
         ip_lst = []
         for item in self.m_coll.find():
@@ -156,6 +156,11 @@ class GetIp():
         except:
             logging.info('TimeOut %s' % ip['http'])
 
+    #将好的ip存入ip.txt
+    def save_good_ip(self):
+        with open('ip.txt', 'w') as f:  # 将优质ip写入文件
+            for ip in self.m_coll.find().sort('num', pymongo.DESCENDING):
+                f.write(ip['ip'] + '\n')
 
 if __name__ == '__main__':
     Ip = GetIp()
@@ -175,5 +180,6 @@ if __name__ == '__main__':
     # Ip.goodip()
     # ip_lst = Ip.get_ip_lst_m()
     # for i in ip_lst:
-    #     Ip.test(i)
+    # Ip.test(i)
+    # Ip.save_good_ip()
 
