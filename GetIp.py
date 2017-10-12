@@ -74,7 +74,7 @@ class GetIp():
             'https': ip,
         }
         try:
-            text = requests.get(self.testurl, proxies=ip_dict, timeout=3).text
+            text = requests.get(self.testurl, proxies=ip_dict, timeout=5).text
             if i in text:
                 logging.info(i + ' insert into fast list')
                 self.fast_ip_lst.append({i: p})
@@ -83,6 +83,7 @@ class GetIp():
                 self.slow_num += 1
         except:
             self.slow_num += 1
+        print self.slow_num
 
     # 将ip存入ip.txt中
     def SaveFastIp(self, fast_ip):
@@ -123,9 +124,9 @@ class GetIp():
         for i in ip_lst:
             print i['ip'], i['num']
 
-    #将num小于10的从库中删除
+    #将num小于5的从库中删除
     def removeip(self):
-        for i in xrange(1, 10):
+        for i in xrange(1, 5):
             data = {'num': i}
             self.m_coll.remove(data)
 
@@ -144,17 +145,6 @@ class GetIp():
             ip_lst.append(ip_dict)
         return ip_lst
 
-    #测试ip
-    def test(self, ip):
-        try:
-            text = requests.get(self.testurl, proxies=ip, timeout=3).text
-            if u'最难的问题' in text:
-                logging.info('good ip %s' % ip['http'])
-            else:
-                logging.info('bad ip %s' % ip['http'])
-        except:
-            logging.info('TimeOut %s' % ip['http'])
-
     #将好的ip存入ip.txt
     def save_good_ip(self):
         with open('ip.txt', 'w') as f:  # 将优质ip写入文件
@@ -167,9 +157,10 @@ if __name__ == '__main__':
     gevent.joinall(thread)
     logging.info('new ip counts %d' % Ip.new_ip_num)
 
-    # p = gp.Pool(100)
+    # p = gp.Pool(5000)
     # p.map(Ip.GetFastIp, Ip.R.smembers(Ip.redis_db))
     # Ip.saveip_mongo()
+    # print Ip.fast_ip_num
     # Ip.goodip()
     # Ip.SaveFastIp(Ip.fast_ip_lst) #存入ip.txt 中
     # print Ip.fast_ip_num
@@ -178,7 +169,5 @@ if __name__ == '__main__':
     # Ip.removeip()
     # Ip.goodip()
     # ip_lst = Ip.get_ip_lst_m()
-    # for i in ip_lst:
-    # Ip.test(i)
     # Ip.save_good_ip()
 
