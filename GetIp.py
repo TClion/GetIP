@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf8
 
-# version:3.0
+# version:3.1
 # kali linux python 2.7.13
 # author:TClion
-# update:2017-10-05
+# update:2017-12-15
 # 在西刺网站高匿网页上寻找可用ip并筛选出响应快的ip存放在ip.txt或mongodb中
 
 import redis
@@ -48,8 +48,11 @@ class GetIp():
         logging.basicConfig(level=logging.INFO)    #设置logging等级为DeBUG
         logging.getLogger("requests").setLevel(logging.WARNING)     #设置requests等级
 
-    # 从西刺网站上抓取ip，全部放在redis中
+
     def GetIpDict(self, pagenumber):
+        '''
+        从西刺网站上抓取ip，全部放在redis中
+        '''
         url = '%s%d' % (self.Url, pagenumber)
         content = requests.get(url, headers=header).content
         data = etree.HTML(content)
@@ -64,8 +67,11 @@ class GetIp():
             except:
                 logging.error('new ip insert error')
 
-    # 筛选出响应快的ip
+
     def GetFastIp(self, item):
+        '''
+        筛选出响应快的ip
+        '''
         i = item.split(':')[0]
         p = item.split(':')[1]
         ip = 'http://' + i + ':' + p
@@ -85,14 +91,20 @@ class GetIp():
             self.slow_num += 1
         print self.slow_num
 
-    # 将ip存入ip.txt中
+
     def SaveFastIp(self, fast_ip):
+        '''
+        将ip存入ip.txt中
+        '''
         with open('ip.txt', 'w') as f:  # 将优质ip写入文件
             for ip in fast_ip:
                 f.write(str(ip) + '\n')
 
-    # 从文件中读取ip列表
+
     def get_ip_lst(self):
+        '''
+        从文件中读取ip列表
+        '''
         IpList = []
         with open('ip.txt', 'r') as f:
             lines = f.readlines()
@@ -108,8 +120,11 @@ class GetIp():
         return IpList
 
 
-    #存入mongo，并记录数量，数量越高，ip越稳定
+
     def saveip_mongo(self):
+        '''
+        存入mongo，并记录数量，数量越高，ip越稳定
+        '''
         for item in self.fast_ip_lst:
             for i, p in item.iteritems():
                 ip_str = i + ':' + p
@@ -118,20 +133,29 @@ class GetIp():
                 else:
                     self.m_coll.update({'ip': ip_str}, {"$inc": {"num": 1}})
 
-    #将mongodb中的ip以num排序
+
     def goodip(self):
+        '''
+        mongodb中的ip以num排序
+        '''
         ip_lst = self.m_coll.find().sort('num', pymongo.DESCENDING)
         for i in ip_lst:
             print i['ip'], i['num']
 
-    #将num小于5的从库中删除
+
     def removeip(self):
+        '''
+        将num小于5的从库中删除
+        '''
         for i in xrange(1, 5):
             data = {'num': i}
             self.m_coll.remove(data)
 
-    #从mongodb中返回ip列表
+
     def get_ip_lst_m(self):
+        '''
+        从mongodb中返回ip列表
+        '''
         ip_lst = []
         for item in self.m_coll.find():
             ip_str = item['ip']
@@ -145,11 +169,15 @@ class GetIp():
             ip_lst.append(ip_dict)
         return ip_lst
 
-    #将好的ip存入ip.txt
+
     def save_good_ip(self):
+        '''
+        将好的ip存入ip.txt
+        '''
         with open('ip.txt', 'w') as f:  # 将优质ip写入文件
             for ip in self.m_coll.find().sort('num', pymongo.DESCENDING):
                 f.write(ip['ip'] + '\n')
+
 
 if __name__ == '__main__':
     Ip = GetIp()
