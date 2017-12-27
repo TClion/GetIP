@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding=utf8
+# -*- coding: utf-8 -*-
 
 # version:3.1
 # kali linux python 2.7.13
